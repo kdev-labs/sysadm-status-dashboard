@@ -1,0 +1,11 @@
+services:
+  dashboard:
+    build: .
+    ports:
+      - "0.0.0.0:${DASHBOARD_PORT:-5000}:5000"
+    volumes:
+      - ${STATUS_FILES_PATH:-/var/log/ansible/status}:/data/status
+    environment:
+      - STATUS_DIR=/data/status
+      - TZ=${TIMEZONE:-Europe/Amsterdam}
+    restart: unless-stopped
