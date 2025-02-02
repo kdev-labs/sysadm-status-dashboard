@@ -2,6 +2,7 @@ services:
   dashboard:
     container_name: ansible-dashboard
     build: .
+    image: ansible-dashboard
     network_mode: host
     # Not needed when using network_mode: host
     # ports:
