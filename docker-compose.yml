@@ -9,6 +9,7 @@ services:
     volumes:
       - ${STATUS_FILES_PATH:-/var/log/ansible/status}:/data/status
     environment:
+      - FLASK_PORT=${DASHBOARD_PORT:-5000}
       - STATUS_DIR=/data/status
       - TZ=${TIMEZONE:-Europe/Amsterdam}
     restart: unless-stopped
