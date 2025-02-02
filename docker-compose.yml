@@ -3,8 +3,9 @@ services:
     container_name: ansible-dashboard
     build: .
     network_mode: host
-    ports:
-      - "0.0.0.0:${DASHBOARD_PORT:-5000}:5000"
+    # Not needed when using network_mode: host
+    # ports:
+    #   - "0.0.0.0:${DASHBOARD_PORT:-5000}:5000"
     volumes:
       - ${STATUS_FILES_PATH:-/var/log/ansible/status}:/data/status
     environment:
