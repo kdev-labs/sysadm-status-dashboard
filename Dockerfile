@@ -8,6 +8,5 @@ COPY . .
 
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
-ENV FLASK_PORT=5001
 
-CMD ["flask", "run", "--host=0.0.0.0", "--port=${FLASK_PORT}"]
+CMD ["sh", "-c", "flask run --host=0.0.0.0 --port=${FLASK_PORT}"]
