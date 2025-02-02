@@ -1,5 +1,6 @@
 services:
   dashboard:
+    container_name: ansible-dashboard
     build: .
     network_mode: host
     ports:
