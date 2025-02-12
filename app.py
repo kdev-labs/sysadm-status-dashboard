@@ -9,6 +9,7 @@ app = Flask(__name__)
 
 # Get status directory from environment variable
 STATUS_DIR = os.getenv('STATUS_DIR', '/data/status')
+RELEASE_DIR = os.getenv('RELEASE_DIR', '/data/releases')
 
 def load_playbook_statuses():
     status_dir = Path(STATUS_DIR)
@@ -40,7 +41,7 @@ def load_playbook_statuses():
     return sorted(playbooks.values(), key=lambda x: x['name'])
 
 def load_release_statuses():
-    status_dir = Path(STATUS_DIR) / 'releases'
+    status_dir = Path(RELEASE_DIR)
     releases = {}
     
     if not status_dir.exists():

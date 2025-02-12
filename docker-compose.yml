@@ -13,6 +13,6 @@ services:
     environment:
       - FLASK_PORT=${DASHBOARD_PORT:-5000}
       - STATUS_DIR=/data/status
-      - RELEASE_DIR=/data/status/releases
+      - RELEASE_DIR=/data/releases
       - TZ=${TIMEZONE:-Europe/Amsterdam}
     restart: unless-stopped
