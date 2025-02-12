@@ -11,10 +11,13 @@ logger = logging.getLogger(__name__)
 
 DATABASE_FILE = os.getenv('DATABASE_FILE', '/data/db/dashboard.db')
 
+def get_db_connection():
+    return sqlite3.connect(DATABASE_FILE)
+
 def init_db():
     """Initialize the database with required tables."""
     logger.info(f"Initializing database at {DATABASE_FILE}")
-    conn = sqlite3.connect(DATABASE_FILE)
+    conn = get_db_connection()
     c = conn.cursor()
     
     # Create tables
@@ -28,6 +31,7 @@ def init_db():
             has_current BOOLEAN,
             has_new BOOLEAN,
             has_old BOOLEAN,
+            git_tag TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(binary_name)
         )
@@ -43,6 +47,7 @@ def init_db():
             source_size INTEGER,
             source_path TEXT,
             operation TEXT,
+            git_tag TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (binary_name) REFERENCES releases(binary_name)
         )
@@ -74,7 +79,7 @@ def insert_playbook(file_path):
         with open(file_path) as f:
             data = json.load(f)
             
-        conn = sqlite3.connect(DATABASE_FILE)
+        conn = get_db_connection()
         c = conn.cursor()
         
         timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
@@ -108,7 +113,7 @@ def insert_release(file_path):
         if file_path.name.endswith('_latest.json'):
             return
             
-        conn = sqlite3.connect(DATABASE_FILE)
+        conn = get_db_connection()
         c = conn.cursor()
         
         # Parse timestamp from filename
@@ -129,8 +134,8 @@ def insert_release(file_path):
             c.execute('''
                 INSERT OR REPLACE INTO releases (
                     binary_name, last_updated, last_action, hosts,
-                    has_current, has_new, has_old
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    has_current, has_new, has_old, git_tag
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
                 timestamp,
@@ -138,15 +143,16 @@ def insert_release(file_path):
                 json.dumps(data.get('hosts', [])),
                 data.get('states', {}).get('current', {}).get('exists', False),
                 data.get('states', {}).get('new', {}).get('exists', False),
-                data.get('states', {}).get('old', {}).get('exists', False)
+                data.get('states', {}).get('old', {}).get('exists', False),
+                data.get('git_tag')
             ))
             
             # Add to history
             c.execute('''
                 INSERT INTO release_history (
                     binary_name, timestamp, action, hosts,
-                    source_size, source_path, operation
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    source_size, source_path, operation, git_tag
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
                 timestamp,
@@ -154,7 +160,8 @@ def insert_release(file_path):
                 json.dumps(data.get('hosts', [])),
                 data.get('details', {}).get('source_size'),
                 data.get('details', {}).get('source_path'),
-                data.get('details', {}).get('operation')
+                data.get('details', {}).get('operation'),
+                data.get('git_tag')
             ))
             
             # Commit transaction
@@ -171,7 +178,7 @@ def insert_release(file_path):
 
 def get_releases(limit=1000):
     """Get the latest releases from the database."""
-    conn = sqlite3.connect(DATABASE_FILE)
+    conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
     
@@ -194,6 +201,7 @@ def get_releases(limit=1000):
                 'has_new': bool(state['has_new']),
                 'has_old': bool(state['has_old'])
             },
+            'git_tag': state['git_tag'],
             'history': []
         }
     
@@ -210,7 +218,8 @@ def get_releases(limit=1000):
             'timestamp': h['timestamp'],
             'action': h['action'],
             'hosts': json.loads(h['hosts']) if h['hosts'] else [],
-            'source_size': h['source_size']
+            'source_size': h['source_size'],
+            'git_tag': h['git_tag']
         } for h in c.fetchall()]
     
     conn.close()
@@ -219,7 +228,7 @@ def get_releases(limit=1000):
 
 def get_playbooks(limit=1000):
     """Get the latest playbook runs from the database."""
-    conn = sqlite3.connect(DATABASE_FILE)
+    conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
     
@@ -243,7 +252,7 @@ def get_playbooks(limit=1000):
 
 def file_exists_in_db(file_path, file_type='release'):
     """Check if a file has already been processed."""
-    conn = sqlite3.connect(DATABASE_FILE)
+    conn = get_db_connection()
     c = conn.cursor()
     
     try:

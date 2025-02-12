@@ -113,6 +113,10 @@
             flex-wrap: wrap;
             gap: 0.5rem;
         }
+        .git-tag {
+            font-size: 0.9em;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -191,8 +195,9 @@
                                 <th style="width: 20%">Binary</th>
                                 <th style="width: 15%">Last Updated</th>
                                 <th style="width: 10%">Last Action</th>
-                                <th style="width: 20%">Hosts</th>
-                                <th style="width: 25%">State</th>
+                                <th style="width: 15%">Hosts</th>
+                                <th style="width: 15%">Git Tag</th>
+                                <th style="width: 15%">State</th>
                                 <th style="width: 10%">Details</th>
                             </tr>
                         </thead>
@@ -210,6 +215,13 @@
                                     <div class="hosts small text-muted">
                                         {{ release.hosts | join(', ') }}
                                     </div>
+                                </td>
+                                <td>
+                                    {% if release.git_tag %}
+                                    <div class="git-tag small">
+                                        <i class="bi bi-tag"></i> {{ release.git_tag }}
+                                    </div>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="release-state">
@@ -258,6 +270,11 @@
                                             <span class="action-type {{ action.action }}">{{ action.action }}</span>
                                             {% if action.source_size %}
                                             <span class="text-muted">Size: {{ action.source_size }} bytes</span>
+                                            {% endif %}
+                                            {% if action.git_tag and action.action == 'release' %}
+                                            <span class="git-tag">
+                                                <i class="bi bi-tag"></i> {{ action.git_tag }}
+                                            </span>
                                             {% endif %}
                                         </div>
                                         <span class="action-timestamp">{{ action.timestamp }}</span>
@@ -310,7 +327,7 @@
                 order: [[1, 'desc']], // Sort by Last Updated by default
                 columnDefs: [
                     { orderable: true, targets: [0, 1] }, // Only allow sorting on Binary and Last Updated
-                    { orderable: false, targets: [2, 3, 4] }
+                    { orderable: false, targets: [2, 3, 4, 5] }
                 ],
                 pageLength: 25,
                 scrollX: false,
