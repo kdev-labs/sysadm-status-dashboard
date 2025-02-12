@@ -49,6 +49,41 @@
         .state-indicator.inactive i {
             color: #dc3545;
         }
+        .action-history {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+        }
+        .action-row {
+            padding: 0.75rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .action-row:last-child {
+            border-bottom: none;
+        }
+        .action-timestamp {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .action-type {
+            display: inline-block;
+            padding: 0.25em 0.6em;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-radius: 0.25rem;
+        }
+        .action-type.release {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        .action-type.promote {
+            background-color: #d1e7dd;
+            color: #0a3622;
+        }
+        .action-type.rollback {
+            background-color: #f8d7da;
+            color: #58151c;
+        }
     </style>
 </head>
 <body>
@@ -115,19 +150,30 @@
                     <table class="table table-bordered table-sm">
                         <thead>
                             <tr>
-                                <th>Binary</th>
-                                <th>Last Updated</th>
-                                <th>Action</th>
-                                <th>State</th>
-                                <th>Details</th>
+                                <th style="width: 15%">Binary</th>
+                                <th style="width: 20%">Last Updated</th>
+                                <th style="width: 15%">Last Action</th>
+                                <th style="width: 25%">State</th>
+                                <th style="width: 25%">Details</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for release in releases %}
                             <tr>
-                                <td>{{ release.name }}</td>
+                                <td>
+                                    <div>{{ release.name }}</div>
+                                    <button class="btn btn-sm btn-outline-secondary mt-1" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#history-{{ release.name }}" 
+                                            aria-expanded="false">
+                                        Show History
+                                    </button>
+                                </td>
                                 <td>{{ release.last_updated }}</td>
-                                <td>{{ release.last_action }}</td>
+                                <td>
+                                    <span class="action-type {{ release.last_action }}">
+                                        {{ release.last_action }}
+                                    </span>
+                                </td>
                                 <td>
                                     <div class="release-state">
                                         <div class="state-indicator {% if release.current_state.has_current %}active{% else %}inactive{% endif %}">
@@ -150,6 +196,43 @@
                                     <div>Size: {{ release.details.source_size }} bytes</div>
                                     <div>Operation: {{ release.details.operation }}</div>
                                     {% endif %}
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="history-{{ release.name }}">
+                                <td colspan="5" class="p-0">
+                                    <div class="action-history">
+                                        {% for action in release.history %}
+                                        <div class="action-row">
+                                            <div class="d-flex justify-content-between align-items-top mb-2">
+                                                <span class="action-type {{ action.action }}">{{ action.action }}</span>
+                                                <span class="action-timestamp">{{ action.timestamp }}</span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>States:</strong>
+                                                <div class="ms-3">
+                                                    {% for state_type, state in action.states.items() %}
+                                                    <div>
+                                                        {{ state_type }}: 
+                                                        {% if state.exists %}exists{% else %}not present{% endif %}
+                                                        {% if state.size %}, size: {{ state.size }} bytes{% endif %}
+                                                        {% if state.modified %}, modified: {{ state.modified }}{% endif %}
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            {% if action.details %}
+                                            <div>
+                                                <strong>Details:</strong>
+                                                <div class="ms-3">
+                                                    <div>Source: {{ action.details.source_path }}</div>
+                                                    <div>Size: {{ action.details.source_size }} bytes</div>
+                                                    <div>Operation: {{ action.details.operation }}</div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
