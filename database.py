@@ -141,7 +141,10 @@ def insert_release(file_path):
                 ON CONFLICT(binary_name) DO UPDATE SET
                     last_updated = excluded.last_updated,
                     last_action = excluded.last_action,
-                    hosts = excluded.hosts,
+                    hosts = CASE 
+                        WHEN excluded.hosts = '[]' THEN releases.hosts
+                        ELSE excluded.hosts
+                    END,
                     has_current = excluded.has_current,
                     has_new = excluded.has_new,
                     has_old = excluded.has_old,
