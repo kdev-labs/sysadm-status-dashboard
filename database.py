@@ -131,6 +131,8 @@ def insert_release(file_path):
         
         try:
             # Update or insert the current state
+            hosts_json = json.dumps(data.get('hosts', []))
+            logger.info(f"Processing hosts for {data['binary_name']}: {hosts_json}")
             c.execute('''
                 INSERT INTO releases (
                     binary_name, last_updated, last_action, hosts,
@@ -151,7 +153,7 @@ def insert_release(file_path):
                 data['binary_name'],
                 timestamp,
                 data['action'],
-                json.dumps(data.get('hosts', [])),
+                hosts_json,
                 data.get('states', {}).get('current', {}).get('exists', False),
                 data.get('states', {}).get('new', {}).get('exists', False),
                 data.get('states', {}).get('old', {}).get('exists', False),
@@ -206,6 +208,7 @@ def get_releases(limit=1000):
     
     for state in c.fetchall():
         logger.info(f"Current state for {state['binary_name']}: action={state['last_action']}, git_tag={state['git_tag']}")
+        logger.info(f"Hosts for {state['binary_name']}: {state['hosts']}")
         releases[state['binary_name']] = {
             'name': state['binary_name'],
             'last_updated': state['last_updated'],
