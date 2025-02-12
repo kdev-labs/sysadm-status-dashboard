@@ -1,4 +1,3 @@
-version: '3'
 services:
   dashboard:
     container_name: ansible-dashboard
