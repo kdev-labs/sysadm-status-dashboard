@@ -146,6 +146,7 @@ def insert_release(file_path):
                 data.get('states', {}).get('old', {}).get('exists', False),
                 data.get('git_tag')
             ))
+            logger.info(f"Inserted release with git_tag: {data.get('git_tag')}")
             
             # Add to history
             c.execute('''
@@ -163,6 +164,7 @@ def insert_release(file_path):
                 data.get('details', {}).get('operation'),
                 data.get('git_tag')
             ))
+            logger.info(f"Added to history with git_tag: {data.get('git_tag')}")
             
             # Commit transaction
             c.execute('COMMIT')
