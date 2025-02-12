@@ -40,6 +40,20 @@ def load_playbook_statuses():
     
     return sorted(playbooks.values(), key=lambda x: x['name'])
 
+def parse_timestamp_from_filename(filename):
+    # Extract timestamp from format: binary_YYYYMMDD_HHMMSS_action.json
+    parts = filename.split('_')
+    if len(parts) >= 3:
+        date_str = parts[1]
+        time_str = parts[2]
+        try:
+            # Combine date and time parts: YYYYMMDD_HHMMSS -> YYYY-MM-DD HH:MM:SS
+            timestamp_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]} {time_str[:2]}:{time_str[2:4]}:{time_str[4:6]}"
+            return datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            return None
+    return None
+
 def load_release_statuses():
     status_dir = Path(RELEASE_DIR)
     releases = {}
@@ -75,7 +89,6 @@ def load_release_statuses():
             parts = action_file.name.split('_')
             if len(parts) >= 4:
                 binary_name = parts[0]
-                timestamp = parts[1] + '_' + parts[2]
                 action = parts[3].replace('.json', '')
                 
                 if binary_name not in releases:
@@ -84,16 +97,17 @@ def load_release_statuses():
                 with open(action_file) as f:
                     action_data = json.load(f)
                 
-                timestamp = datetime.fromisoformat(action_data['timestamp'].replace('Z', '+00:00'))
-                local_tz = pytz.timezone(os.getenv('TZ', 'Europe/Amsterdam'))
-                local_time = timestamp.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S')
-                
-                releases[binary_name]['history'].append({
-                    'timestamp': local_time,
-                    'action': action_data['action'],
-                    'states': action_data['states'],
-                    'details': action_data.get('details', {})
-                })
+                # Use timestamp from filename
+                timestamp = parse_timestamp_from_filename(action_file.name)
+                if timestamp:
+                    local_tz = pytz.timezone(os.getenv('TZ', 'Europe/Amsterdam'))
+                    local_time = timestamp.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    releases[binary_name]['history'].append({
+                        'timestamp': local_time,
+                        'action': action_data['action'],
+                        'source_size': action_data.get('details', {}).get('source_size', 0)
+                    })
                 
         except (json.JSONDecodeError, KeyError, FileNotFoundError) as e:
             app.logger.error(f"Error processing action file {action_file}: {str(e)}")

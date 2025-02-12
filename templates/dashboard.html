@@ -202,34 +202,14 @@
                                 <td colspan="5" class="p-0">
                                     <div class="action-history">
                                         {% for action in release.history %}
-                                        <div class="action-row">
-                                            <div class="d-flex justify-content-between align-items-top mb-2">
+                                        <div class="action-row d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center gap-3">
                                                 <span class="action-type {{ action.action }}">{{ action.action }}</span>
-                                                <span class="action-timestamp">{{ action.timestamp }}</span>
+                                                {% if action.source_size %}
+                                                <span class="text-muted">Size: {{ action.source_size }} bytes</span>
+                                                {% endif %}
                                             </div>
-                                            <div class="mb-2">
-                                                <strong>States:</strong>
-                                                <div class="ms-3">
-                                                    {% for state_type, state in action.states.items() %}
-                                                    <div>
-                                                        {{ state_type }}: 
-                                                        {% if state.exists %}exists{% else %}not present{% endif %}
-                                                        {% if state.size %}, size: {{ state.size }} bytes{% endif %}
-                                                        {% if state.modified %}, modified: {{ state.modified }}{% endif %}
-                                                    </div>
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
-                                            {% if action.details %}
-                                            <div>
-                                                <strong>Details:</strong>
-                                                <div class="ms-3">
-                                                    <div>Source: {{ action.details.source_path }}</div>
-                                                    <div>Size: {{ action.details.source_size }} bytes</div>
-                                                    <div>Operation: {{ action.details.operation }}</div>
-                                                </div>
-                                            </div>
-                                            {% endif %}
+                                            <span class="action-timestamp">{{ action.timestamp }}</span>
                                         </div>
                                         {% endfor %}
                                     </div>
