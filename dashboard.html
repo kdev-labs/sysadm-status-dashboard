@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Ansible Playbook Status Dashboard</title>
+    <title>System Status Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .status-ok { background-color: #14e244; }
         .status-failed { background-color: #f8d7da; }
@@ -20,16 +21,35 @@
             color: #721c24;
             margin-top: 5px;
         }
+        .state-true { color: #198754; }
+        .state-false { color: #dc3545; }
     </style>
 </head>
 <body>
     <div class="container-fluid mt-4">
-        <h1>Ansible Playbook Status</h1>
-        <p class="text-muted">Shows the latest execution status of each playbook</p>
+        <h1>System Status Dashboard</h1>
         
-        <div class="row">
-            <div class="col-md-8">
-                <h3>Playbook Status</h3>
+        <ul class="nav nav-tabs mb-3" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="playbooks-tab" data-bs-toggle="tab" data-bs-target="#playbooks" type="button" role="tab">
+                    Playbook Status
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="releases-tab" data-bs-toggle="tab" data-bs-target="#releases" type="button" role="tab">
+                    Release Status
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="hosts-tab" data-bs-toggle="tab" data-bs-target="#hosts" type="button" role="tab">
+                    Monitored Hosts
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="dashboardContent">
+            <!-- Playbooks Tab -->
+            <div class="tab-pane fade show active" id="playbooks" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-bordered table-sm">
                         <thead>
@@ -63,13 +83,51 @@
                 </div>
             </div>
             
-            <div class="col-md-4">
-                <h3>Monitored Hosts</h3>
-                <ul class="list-group">
+            <!-- Releases Tab -->
+            <div class="tab-pane fade" id="releases" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th>Binary</th>
+                                <th>Last Updated</th>
+                                <th>Action</th>
+                                <th>State</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for release in releases %}
+                            <tr>
+                                <td>{{ release.name }}</td>
+                                <td>{{ release.last_updated }}</td>
+                                <td>{{ release.last_action }}</td>
+                                <td>
+                                    <div>Current: <span class="state-{{ release.current_state.has_current }}">{{ release.current_state.has_current }}</span></div>
+                                    <div>New: <span class="state-{{ release.current_state.has_new }}">{{ release.current_state.has_new }}</span></div>
+                                    <div>Old: <span class="state-{{ release.current_state.has_old }}">{{ release.current_state.has_old }}</span></div>
+                                </td>
+                                <td>
+                                    {% if release.details %}
+                                    <div>Source: {{ release.details.source_path }}</div>
+                                    <div>Size: {{ release.details.source_size }} bytes</div>
+                                    <div>Operation: {{ release.details.operation }}</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Hosts Tab -->
+            <div class="tab-pane fade" id="hosts" role="tabpanel">
+                <div class="list-group">
                     {% for host in hosts %}
-                    <li class="list-group-item">{{ host }}</li>
+                    <div class="list-group-item">{{ host }}</div>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
         </div>
     </div>
