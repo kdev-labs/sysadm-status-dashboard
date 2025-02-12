@@ -4,6 +4,11 @@ from pathlib import Path
 from datetime import datetime
 import pytz
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -121,13 +126,17 @@ def load_release_statuses():
 
 @app.route('/')
 def dashboard():
+    logger.info("Fetching data from database...")
     playbooks = load_playbook_statuses()
     releases = load_release_statuses()
     all_hosts = set()
     for playbook in playbooks:
         all_hosts.update(playbook['hosts'])
-    
+    logger.info(f"Retrieved {len(playbooks)} playbooks and {len(releases)} releases from database")
     return render_template('dashboard.html', 
                          playbooks=playbooks,
                          releases=releases,
                          hosts=sorted(all_hosts))
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

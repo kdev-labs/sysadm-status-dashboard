@@ -3,11 +3,17 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import logging
 
-DATABASE_FILE = os.getenv('DATABASE_FILE', '/data/dashboard.db')
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+DATABASE_FILE = os.getenv('DATABASE_FILE', '/data/db/dashboard.db')
 
 def init_db():
     """Initialize the database with required tables."""
+    logger.info(f"Initializing database at {DATABASE_FILE}")
     conn = sqlite3.connect(DATABASE_FILE)
     c = conn.cursor()
     
@@ -84,9 +90,10 @@ def insert_release(file_path):
         ))
         
         conn.commit()
+        logger.info(f"Inserted release into database: {file_path}")
         conn.close()
     except Exception as e:
-        print(f"Error processing {file_path}: {str(e)}")
+        logger.error(f"Error processing {file_path}: {str(e)}")
 
 def insert_playbook(file_path):
     """Insert a playbook JSON file into the database."""
@@ -112,9 +119,10 @@ def insert_playbook(file_path):
         ))
         
         conn.commit()
+        logger.info(f"Inserted playbook into database: {file_path}")
         conn.close()
     except Exception as e:
-        print(f"Error processing {file_path}: {str(e)}")
+        logger.error(f"Error processing {file_path}: {str(e)}")
 
 def get_releases(limit=1000):
     """Get the latest releases from the database."""
@@ -168,6 +176,7 @@ def get_releases(limit=1000):
         } for h in history]
     
     conn.close()
+    logger.info("Fetched releases from database")
     return sorted(releases.values(), key=lambda x: x['name'])
 
 def get_playbooks(limit=1000):
@@ -202,6 +211,7 @@ def get_playbooks(limit=1000):
         })
     
     conn.close()
+    logger.info("Fetched playbooks from database")
     return playbooks
 
 def file_exists_in_db(file_path, file_type='release'):
@@ -237,20 +247,26 @@ def file_exists_in_db(file_path, file_type='release'):
             ''', (data['playbook'], timestamp))
         
         count = c.fetchone()[0]
+        logger.debug(f"Checked file existence in database: {file_path}, exists={count > 0}")
         return count > 0
     except Exception as e:
-        print(f"Error checking file existence: {str(e)}")
+        logger.error(f"Error checking file existence: {str(e)}")
         return False
     finally:
         conn.close()
 
 def process_existing_files():
     """Process all existing JSON files in the directories."""
+    logger.info("Starting to process existing files...")
     playbooks_dir = os.getenv('PLAYBOOK_DIR', '/data/playbooks')
     releases_dir = os.getenv('RELEASE_DIR', '/data/releases')
     
+    processed_count = {'playbook': 0, 'release': 0}
+    skipped_count = {'playbook': 0, 'release': 0}
+    
     for directory, file_type in [(playbooks_dir, 'playbook'), (releases_dir, 'release')]:
         if not os.path.exists(directory):
+            logger.warning(f"Directory does not exist: {directory}")
             continue
             
         for file_path in Path(directory).glob('*.json'):
@@ -260,8 +276,16 @@ def process_existing_files():
                 
             # Check if file has already been processed
             if not file_exists_in_db(file_path, file_type):
-                print(f"Processing existing file: {file_path}")
+                logger.info(f"Processing existing file: {file_path}")
                 if file_type == 'playbook':
                     insert_playbook(file_path)
                 else:
                     insert_release(file_path)
+                processed_count[file_type] += 1
+            else:
+                logger.debug(f"Skipping already processed file: {file_path}")
+                skipped_count[file_type] += 1
+    
+    logger.info(f"Finished processing existing files:")
+    logger.info(f"Processed: {processed_count['playbook']} playbooks, {processed_count['release']} releases")
+    logger.info(f"Skipped: {skipped_count['playbook']} playbooks, {skipped_count['release']} releases")
