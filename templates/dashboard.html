@@ -198,7 +198,7 @@
                                     </button>
                                 </td>
                             </tr>
-                            <tr class="collapse" id="history-{{ release.name }}">
+                            <tr class="collapse history-row" id="history-{{ release.name }}">
                                 <td colspan="5" class="p-0">
                                     <div class="action-history">
                                         {% for action in release.history %}
@@ -255,7 +255,21 @@
                     { orderable: true, targets: [0, 1] }, // Only allow sorting on Binary and Last Updated
                     { orderable: false, targets: [2, 3, 4] }
                 ],
-                pageLength: 25
+                pageLength: 25,
+                rowGroup: {
+                    dataSrc: 0
+                },
+                "rowId": function(row) {
+                    return 'row-' + row[0];  // Use Binary name as row ID
+                },
+                createdRow: function(row, data, dataIndex) {
+                    // Add data attributes for collapse functionality
+                    $(row).attr('data-binary', data[0]);
+                },
+                drawCallback: function(settings) {
+                    // Re-hide history rows after table redraw
+                    $('.history-row').addClass('collapse');
+                }
             });
             
             // Handle Bootstrap tab changes
