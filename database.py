@@ -258,7 +258,7 @@ def file_exists_in_db(file_path, file_type='release'):
 def process_existing_files():
     """Process all existing JSON files in the directories."""
     logger.info("Starting to process existing files...")
-    playbooks_dir = os.getenv('PLAYBOOK_DIR', '/data/playbooks')
+    playbooks_dir = os.getenv('STATUS_DIR', '/data/status')
     releases_dir = os.getenv('RELEASE_DIR', '/data/releases')
     
     processed_count = {'playbook': 0, 'release': 0}
