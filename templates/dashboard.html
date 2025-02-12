@@ -47,9 +47,8 @@
             color: #dc3545;
         }
         .action-history {
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            margin: 0.5rem 0;
+            max-height: 400px;
+            overflow-y: auto;
         }
         .action-row {
             padding: 0.75rem;
@@ -80,6 +79,10 @@
         .action-type.rollback {
             background-color: #f8d7da;
             color: #58151c;
+        }
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
         }
         /* DataTables Customization */
         .dataTables_wrapper .dataTables_filter {
@@ -192,27 +195,9 @@
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-secondary" type="button" 
-                                            data-bs-toggle="collapse" data-bs-target="#history-{{ release.name }}" 
-                                            aria-expanded="false">
+                                            data-bs-toggle="modal" data-bs-target="#history-{{ release.name }}">
                                         History
                                     </button>
-                                </td>
-                            </tr>
-                            <tr class="collapse history-row" id="history-{{ release.name }}">
-                                <td colspan="5" class="p-0">
-                                    <div class="action-history">
-                                        {% for action in release.history %}
-                                        <div class="action-row d-flex justify-content-between align-items-center">
-                                            <div class="d-flex align-items-center gap-3">
-                                                <span class="action-type {{ action.action }}">{{ action.action }}</span>
-                                                {% if action.source_size %}
-                                                <span class="text-muted">Size: {{ action.source_size }} bytes</span>
-                                                {% endif %}
-                                            </div>
-                                            <span class="action-timestamp">{{ action.timestamp }}</span>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -220,6 +205,35 @@
                     </table>
                 </div>
             </div>
+            
+            <!-- History Modals -->
+            {% for release in releases %}
+            <div class="modal fade" id="history-{{ release.name }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ release.name }} - History</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="action-history">
+                                {% for action in release.history %}
+                                <div class="action-row d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="action-type {{ action.action }}">{{ action.action }}</span>
+                                        {% if action.source_size %}
+                                        <span class="text-muted">Size: {{ action.source_size }} bytes</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="action-timestamp">{{ action.timestamp }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
             
             <!-- Hosts Tab -->
             <div class="tab-pane fade" id="hosts" role="tabpanel">
@@ -255,21 +269,7 @@
                     { orderable: true, targets: [0, 1] }, // Only allow sorting on Binary and Last Updated
                     { orderable: false, targets: [2, 3, 4] }
                 ],
-                pageLength: 25,
-                rowGroup: {
-                    dataSrc: 0
-                },
-                "rowId": function(row) {
-                    return 'row-' + row[0];  // Use Binary name as row ID
-                },
-                createdRow: function(row, data, dataIndex) {
-                    // Add data attributes for collapse functionality
-                    $(row).attr('data-binary', data[0]);
-                },
-                drawCallback: function(settings) {
-                    // Re-hide history rows after table redraw
-                    $('.history-row').addClass('collapse');
-                }
+                pageLength: 25
             });
             
             // Handle Bootstrap tab changes
