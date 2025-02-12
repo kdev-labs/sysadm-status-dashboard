@@ -132,15 +132,21 @@ def insert_release(file_path):
         try:
             # Update or insert the current state
             c.execute('''
-                INSERT OR REPLACE INTO releases (
+                INSERT INTO releases (
                     binary_name, last_updated, last_action, hosts,
                     has_current, has_new, has_old, git_tag
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 
-                    CASE 
-                        WHEN ? = 'release' THEN ?
-                        ELSE (SELECT git_tag FROM releases WHERE binary_name = ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(binary_name) DO UPDATE SET
+                    last_updated = excluded.last_updated,
+                    last_action = excluded.last_action,
+                    hosts = excluded.hosts,
+                    has_current = excluded.has_current,
+                    has_new = excluded.has_new,
+                    has_old = excluded.has_old,
+                    git_tag = CASE 
+                        WHEN excluded.git_tag IS NOT NULL THEN excluded.git_tag
+                        ELSE releases.git_tag
                     END
-                )
             ''', (
                 data['binary_name'],
                 timestamp,
@@ -149,11 +155,9 @@ def insert_release(file_path):
                 data.get('states', {}).get('current', {}).get('exists', False),
                 data.get('states', {}).get('new', {}).get('exists', False),
                 data.get('states', {}).get('old', {}).get('exists', False),
-                data['action'],  # For the CASE statement
-                data.get('git_tag'),  # For release actions
-                data['binary_name']  # For the subquery
+                data.get('git_tag')
             ))
-            logger.info(f"Inserted/updating release - binary: {data['binary_name']}, action: {data['action']}, git_tag: {data.get('git_tag')}")
+            logger.info(f"Inserting/updating release - binary: {data['binary_name']}, action: {data['action']}, git_tag: {data.get('git_tag')}")
             
             # Add to history
             c.execute('''
