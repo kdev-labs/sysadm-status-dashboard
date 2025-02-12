@@ -94,6 +94,25 @@
         table.dataTable > tbody > tr.child ul.dtr-details {
             display: block;
         }
+        /* Table responsiveness */
+        .table-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        .table {
+            width: 100% !important;
+        }
+        .table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .release-state {
+            min-width: auto;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -121,7 +140,7 @@
         <div class="tab-content" id="dashboardContent">
             <!-- Playbooks Tab -->
             <div class="tab-pane fade show active" id="playbooks" role="tabpanel">
-                <div class="table-responsive">
+                <div class="table-container">
                     <table id="playbooks-table" class="table table-bordered table-sm">
                         <thead>
                             <tr>
@@ -156,15 +175,15 @@
             
             <!-- Releases Tab -->
             <div class="tab-pane fade" id="releases" role="tabpanel">
-                <div class="table-responsive">
+                <div class="table-container">
                     <table id="releases-table" class="table table-bordered table-sm">
                         <thead>
                             <tr>
-                                <th style="width: 15%">Binary</th>
+                                <th style="width: 20%">Binary</th>
                                 <th style="width: 20%">Last Updated</th>
                                 <th style="width: 15%">Last Action</th>
                                 <th style="width: 35%">State</th>
-                                <th style="width: 15%">Details</th>
+                                <th style="width: 10%">Details</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -259,7 +278,9 @@
                 columnDefs: [
                     { orderable: false, targets: 3 } // Disable sorting for Hosts column
                 ],
-                pageLength: 25
+                pageLength: 25,
+                scrollX: false,
+                autoWidth: false
             });
             
             // Initialize Releases table
@@ -269,7 +290,9 @@
                     { orderable: true, targets: [0, 1] }, // Only allow sorting on Binary and Last Updated
                     { orderable: false, targets: [2, 3, 4] }
                 ],
-                pageLength: 25
+                pageLength: 25,
+                scrollX: false,
+                autoWidth: false
             });
             
             // Handle Bootstrap tab changes
