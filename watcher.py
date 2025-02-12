@@ -34,7 +34,7 @@ def start_watcher():
     process_existing_files()
     
     # Set up paths to watch
-    playbooks_dir = os.getenv('PLAYBOOK_DIR', '/data/playbooks')
+    playbooks_dir = os.getenv('STATUS_DIR', '/data/status')
     releases_dir = os.getenv('RELEASE_DIR', '/data/releases')
     
     # Create an observer and handler
