@@ -193,6 +193,7 @@ def get_releases(limit=1000):
     ''')
     
     for state in c.fetchall():
+        logger.info(f"Release state from DB - binary: {state['binary_name']}, git_tag: {state['git_tag']}")
         releases[state['binary_name']] = {
             'name': state['binary_name'],
             'last_updated': state['last_updated'],
@@ -216,13 +217,17 @@ def get_releases(limit=1000):
             LIMIT ?
         ''', (binary_name, limit))
         
-        releases[binary_name]['history'] = [{
-            'timestamp': h['timestamp'],
-            'action': h['action'],
-            'hosts': json.loads(h['hosts']) if h['hosts'] else [],
-            'source_size': h['source_size'],
-            'git_tag': h['git_tag']
-        } for h in c.fetchall()]
+        history_items = []
+        for h in c.fetchall():
+            logger.info(f"History item from DB - binary: {h['binary_name']}, action: {h['action']}, git_tag: {h['git_tag']}")
+            history_items.append({
+                'timestamp': h['timestamp'],
+                'action': h['action'],
+                'hosts': json.loads(h['hosts']) if h['hosts'] else [],
+                'source_size': h['source_size'],
+                'git_tag': h['git_tag']
+            })
+        releases[binary_name]['history'] = history_items
     
     conn.close()
     logger.info("Fetched release history from database")
