@@ -51,15 +51,26 @@
             overflow-y: auto;
         }
         .action-row {
-            padding: 0.75rem;
-            border-bottom: 1px solid #dee2e6;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
         }
         .action-row:last-child {
             border-bottom: none;
         }
-        .action-timestamp {
-            color: #6c757d;
-            font-size: 0.9em;
+        .action-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .action-meta {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .git-tag {
+            color: #666;
+            white-space: nowrap;
         }
         .action-type {
             display: inline-block;
@@ -116,6 +127,9 @@
         .git-tag {
             font-size: 0.9em;
             color: #666;
+        }
+        .modal-lg {
+            max-width: 1000px;
         }
     </style>
 </head>
@@ -255,7 +269,7 @@
             <!-- History Modals -->
             {% for release in releases %}
             <div class="modal fade" id="history-{{ release.name }}" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">{{ release.name }} - History</h5>
@@ -264,9 +278,9 @@
                         <div class="modal-body p-0">
                             <div class="action-history">
                                 {% for action in release.history %}
-                                <div class="action-row d-flex flex-column">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="d-flex align-items-center gap-3">
+                                <div class="action-row">
+                                    <div class="action-details">
+                                        <div class="action-meta">
                                             <span class="action-type {{ action.action }}">{{ action.action }}</span>
                                             {% if action.source_size %}
                                             <span class="text-muted">Size: {{ action.source_size }} bytes</span>

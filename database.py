@@ -135,7 +135,12 @@ def insert_release(file_path):
                 INSERT OR REPLACE INTO releases (
                     binary_name, last_updated, last_action, hosts,
                     has_current, has_new, has_old, git_tag
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 
+                    CASE 
+                        WHEN ? = 'release' THEN ?
+                        ELSE (SELECT git_tag FROM releases WHERE binary_name = ?)
+                    END
+                )
             ''', (
                 data['binary_name'],
                 timestamp,
@@ -144,9 +149,11 @@ def insert_release(file_path):
                 data.get('states', {}).get('current', {}).get('exists', False),
                 data.get('states', {}).get('new', {}).get('exists', False),
                 data.get('states', {}).get('old', {}).get('exists', False),
-                data.get('git_tag')
+                data['action'],  # For the CASE statement
+                data.get('git_tag'),  # For release actions
+                data['binary_name']  # For the subquery
             ))
-            logger.info(f"Inserted release with git_tag: {data.get('git_tag')}")
+            logger.info(f"Inserted/updating release - binary: {data['binary_name']}, action: {data['action']}, git_tag: {data.get('git_tag')}")
             
             # Add to history
             c.execute('''
@@ -187,13 +194,14 @@ def get_releases(limit=1000):
     releases = {}
     
     # Get all current release states
+    logger.info("Fetching current release states...")
     c.execute('''
         SELECT * FROM releases 
         ORDER BY binary_name
     ''')
     
     for state in c.fetchall():
-        logger.info(f"Release state from DB - binary: {state['binary_name']}, git_tag: {state['git_tag']}")
+        logger.info(f"Current state for {state['binary_name']}: action={state['last_action']}, git_tag={state['git_tag']}")
         releases[state['binary_name']] = {
             'name': state['binary_name'],
             'last_updated': state['last_updated'],
