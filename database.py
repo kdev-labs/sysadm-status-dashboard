@@ -22,15 +22,27 @@ def init_db():
         CREATE TABLE IF NOT EXISTS releases (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             binary_name TEXT NOT NULL,
+            last_updated DATETIME NOT NULL,
+            last_action TEXT NOT NULL,
+            has_current BOOLEAN,
+            has_new BOOLEAN,
+            has_old BOOLEAN,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(binary_name)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS release_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            binary_name TEXT NOT NULL,
             timestamp DATETIME NOT NULL,
             action TEXT NOT NULL,
             source_size INTEGER,
             source_path TEXT,
             operation TEXT,
-            has_current BOOLEAN,
-            has_new BOOLEAN,
-            has_old BOOLEAN,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (binary_name) REFERENCES releases(binary_name)
         )
     ''')
     
@@ -42,15 +54,50 @@ def init_db():
             status TEXT NOT NULL,
             hosts TEXT NOT NULL,
             details TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(playbook_name)
         )
     ''')
+    
+    # Create indexes for better performance
+    c.execute('CREATE INDEX IF NOT EXISTS idx_release_history_binary ON release_history(binary_name)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_release_history_timestamp ON release_history(timestamp)')
     
     conn.commit()
     conn.close()
 
+def insert_playbook(file_path):
+    """Insert or update a playbook JSON file in the database."""
+    try:
+        with open(file_path) as f:
+            data = json.load(f)
+            
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        
+        timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+        
+        # Use INSERT OR REPLACE to update existing record
+        c.execute('''
+            INSERT OR REPLACE INTO playbooks (
+                playbook_name, timestamp, status, hosts, details
+            ) VALUES (?, ?, ?, ?, ?)
+        ''', (
+            data['playbook'],
+            timestamp,
+            data['status'],
+            json.dumps(data['hosts']),
+            json.dumps(data.get('details', []))
+        ))
+        
+        conn.commit()
+        logger.info(f"Upserted playbook in database: {file_path}")
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error processing {file_path}: {str(e)}")
+
 def insert_release(file_path):
-    """Insert a release JSON file into the database."""
+    """Insert or update a release JSON file in the database."""
     try:
         with open(file_path) as f:
             data = json.load(f)
@@ -72,54 +119,48 @@ def insert_release(file_path):
         else:
             timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
         
-        c.execute('''
-            INSERT INTO releases (
-                binary_name, timestamp, action, source_size, source_path, operation,
-                has_current, has_new, has_old
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            data['binary_name'],
-            timestamp,
-            data['action'],
-            data.get('details', {}).get('source_size'),
-            data.get('details', {}).get('source_path'),
-            data.get('details', {}).get('operation'),
-            data.get('states', {}).get('current', {}).get('exists', False),
-            data.get('states', {}).get('new', {}).get('exists', False),
-            data.get('states', {}).get('old', {}).get('exists', False)
-        ))
+        # Begin transaction
+        c.execute('BEGIN TRANSACTION')
         
-        conn.commit()
-        logger.info(f"Inserted release into database: {file_path}")
-        conn.close()
-    except Exception as e:
-        logger.error(f"Error processing {file_path}: {str(e)}")
-
-def insert_playbook(file_path):
-    """Insert a playbook JSON file into the database."""
-    try:
-        with open(file_path) as f:
-            data = json.load(f)
+        try:
+            # Update or insert the current state
+            c.execute('''
+                INSERT OR REPLACE INTO releases (
+                    binary_name, last_updated, last_action,
+                    has_current, has_new, has_old
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                data['binary_name'],
+                timestamp,
+                data['action'],
+                data.get('states', {}).get('current', {}).get('exists', False),
+                data.get('states', {}).get('new', {}).get('exists', False),
+                data.get('states', {}).get('old', {}).get('exists', False)
+            ))
             
-        conn = sqlite3.connect(DATABASE_FILE)
-        c = conn.cursor()
-        
-        timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
-        
-        c.execute('''
-            INSERT INTO playbooks (
-                playbook_name, timestamp, status, hosts, details
-            ) VALUES (?, ?, ?, ?, ?)
-        ''', (
-            data['playbook'],
-            timestamp,
-            data['status'],
-            json.dumps(data['hosts']),
-            json.dumps(data.get('details', []))
-        ))
-        
-        conn.commit()
-        logger.info(f"Inserted playbook into database: {file_path}")
+            # Add to history
+            c.execute('''
+                INSERT INTO release_history (
+                    binary_name, timestamp, action,
+                    source_size, source_path, operation
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                data['binary_name'],
+                timestamp,
+                data['action'],
+                data.get('details', {}).get('source_size'),
+                data.get('details', {}).get('source_path'),
+                data.get('details', {}).get('operation')
+            ))
+            
+            # Commit transaction
+            c.execute('COMMIT')
+            logger.info(f"Processed release in database: {file_path}")
+            
+        except Exception as e:
+            c.execute('ROLLBACK')
+            raise e
+            
         conn.close()
     except Exception as e:
         logger.error(f"Error processing {file_path}: {str(e)}")
@@ -132,25 +173,17 @@ def get_releases(limit=1000):
     
     releases = {}
     
-    # Get the latest state for each binary
+    # Get all current release states
     c.execute('''
-        WITH latest_releases AS (
-            SELECT binary_name, MAX(timestamp) as max_timestamp
-            FROM releases
-            GROUP BY binary_name
-        )
-        SELECT r.*
-        FROM releases r
-        JOIN latest_releases lr
-        ON r.binary_name = lr.binary_name AND r.timestamp = lr.max_timestamp
+        SELECT * FROM releases 
+        ORDER BY binary_name
     ''')
-    latest_states = c.fetchall()
     
-    for state in latest_states:
+    for state in c.fetchall():
         releases[state['binary_name']] = {
             'name': state['binary_name'],
-            'last_updated': state['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
-            'last_action': state['action'],
+            'last_updated': state['last_updated'],
+            'last_action': state['last_action'],
             'current_state': {
                 'has_current': bool(state['has_current']),
                 'has_new': bool(state['has_new']),
@@ -162,21 +195,20 @@ def get_releases(limit=1000):
     # Get history for each binary
     for binary_name in releases:
         c.execute('''
-            SELECT * FROM releases
+            SELECT * FROM release_history
             WHERE binary_name = ?
             ORDER BY timestamp DESC
             LIMIT ?
         ''', (binary_name, limit))
-        history = c.fetchall()
         
         releases[binary_name]['history'] = [{
-            'timestamp': h['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            'timestamp': h['timestamp'],
             'action': h['action'],
             'source_size': h['source_size']
-        } for h in history]
+        } for h in c.fetchall()]
     
     conn.close()
-    logger.info("Fetched releases from database")
+    logger.info("Fetched release history from database")
     return sorted(releases.values(), key=lambda x: x['name'])
 
 def get_playbooks(limit=1000):
@@ -185,30 +217,19 @@ def get_playbooks(limit=1000):
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
     
-    # Get the latest run for each playbook
     c.execute('''
-        WITH latest_runs AS (
-            SELECT playbook_name, MAX(timestamp) as max_timestamp
-            FROM playbooks
-            GROUP BY playbook_name
-        )
-        SELECT p.*
-        FROM playbooks p
-        JOIN latest_runs lr
-        ON p.playbook_name = lr.playbook_name AND p.timestamp = lr.max_timestamp
-        ORDER BY p.playbook_name
+        SELECT * FROM playbooks
+        ORDER BY playbook_name
         LIMIT ?
     ''', (limit,))
     
-    playbooks = []
-    for row in c.fetchall():
-        playbooks.append({
-            'name': row['playbook_name'],
-            'last_run': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
-            'status': row['status'],
-            'hosts': json.loads(row['hosts']),
-            'details': json.loads(row['details'])
-        })
+    playbooks = [{
+        'name': row['playbook_name'],
+        'last_run': row['timestamp'],
+        'status': row['status'],
+        'hosts': json.loads(row['hosts']),
+        'details': json.loads(row['details'])
+    } for row in c.fetchall()]
     
     conn.close()
     logger.info("Fetched playbooks from database")
@@ -230,7 +251,7 @@ def file_exists_in_db(file_path, file_type='release'):
                 binary_name = parts[0]
                 
                 c.execute('''
-                    SELECT COUNT(*) FROM releases 
+                    SELECT COUNT(*) FROM release_history 
                     WHERE binary_name = ? AND timestamp = ?
                 ''', (binary_name, timestamp_str))
             else:
