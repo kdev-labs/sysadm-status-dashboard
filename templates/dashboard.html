@@ -153,21 +153,14 @@
                                 <th style="width: 15%">Binary</th>
                                 <th style="width: 20%">Last Updated</th>
                                 <th style="width: 15%">Last Action</th>
-                                <th style="width: 25%">State</th>
-                                <th style="width: 25%">Details</th>
+                                <th style="width: 35%">State</th>
+                                <th style="width: 15%">Details</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for release in releases %}
                             <tr>
-                                <td>
-                                    <div>{{ release.name }}</div>
-                                    <button class="btn btn-sm btn-outline-secondary mt-1" type="button" 
-                                            data-bs-toggle="collapse" data-bs-target="#history-{{ release.name }}" 
-                                            aria-expanded="false">
-                                        Show History
-                                    </button>
-                                </td>
+                                <td>{{ release.name }}</td>
                                 <td>{{ release.last_updated }}</td>
                                 <td>
                                     <span class="action-type {{ release.last_action }}">
@@ -191,11 +184,11 @@
                                     </div>
                                 </td>
                                 <td>
-                                    {% if release.details %}
-                                    <div>Source: {{ release.details.source_path }}</div>
-                                    <div>Size: {{ release.details.source_size }} bytes</div>
-                                    <div>Operation: {{ release.details.operation }}</div>
-                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#history-{{ release.name }}" 
+                                            aria-expanded="false">
+                                        History
+                                    </button>
                                 </td>
                             </tr>
                             <tr class="collapse" id="history-{{ release.name }}">
