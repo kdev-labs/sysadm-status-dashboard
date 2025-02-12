@@ -24,6 +24,7 @@ def init_db():
             binary_name TEXT NOT NULL,
             last_updated DATETIME NOT NULL,
             last_action TEXT NOT NULL,
+            hosts TEXT,
             has_current BOOLEAN,
             has_new BOOLEAN,
             has_old BOOLEAN,
@@ -38,6 +39,7 @@ def init_db():
             binary_name TEXT NOT NULL,
             timestamp DATETIME NOT NULL,
             action TEXT NOT NULL,
+            hosts TEXT,
             source_size INTEGER,
             source_path TEXT,
             operation TEXT,
@@ -126,13 +128,14 @@ def insert_release(file_path):
             # Update or insert the current state
             c.execute('''
                 INSERT OR REPLACE INTO releases (
-                    binary_name, last_updated, last_action,
+                    binary_name, last_updated, last_action, hosts,
                     has_current, has_new, has_old
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
                 timestamp,
                 data['action'],
+                json.dumps(data.get('hosts', [])),
                 data.get('states', {}).get('current', {}).get('exists', False),
                 data.get('states', {}).get('new', {}).get('exists', False),
                 data.get('states', {}).get('old', {}).get('exists', False)
@@ -141,13 +144,14 @@ def insert_release(file_path):
             # Add to history
             c.execute('''
                 INSERT INTO release_history (
-                    binary_name, timestamp, action,
+                    binary_name, timestamp, action, hosts,
                     source_size, source_path, operation
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
                 timestamp,
                 data['action'],
+                json.dumps(data.get('hosts', [])),
                 data.get('details', {}).get('source_size'),
                 data.get('details', {}).get('source_path'),
                 data.get('details', {}).get('operation')
@@ -184,6 +188,7 @@ def get_releases(limit=1000):
             'name': state['binary_name'],
             'last_updated': state['last_updated'],
             'last_action': state['last_action'],
+            'hosts': json.loads(state['hosts']) if state['hosts'] else [],
             'current_state': {
                 'has_current': bool(state['has_current']),
                 'has_new': bool(state['has_new']),
@@ -204,6 +209,7 @@ def get_releases(limit=1000):
         releases[binary_name]['history'] = [{
             'timestamp': h['timestamp'],
             'action': h['action'],
+            'hosts': json.loads(h['hosts']) if h['hosts'] else [],
             'source_size': h['source_size']
         } for h in c.fetchall()]
     
