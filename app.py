@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for
 import json
 from pathlib import Path
 from datetime import datetime
@@ -124,8 +124,8 @@ def load_release_statuses():
     
     return sorted(releases.values(), key=lambda x: x['name'])
 
-@app.route('/')
-def dashboard():
+def get_dashboard_data():
+    """Get all data needed for the dashboard."""
     logger.info("Fetching data from database...")
     playbooks = load_playbook_statuses()
     releases = load_release_statuses()
@@ -133,10 +133,42 @@ def dashboard():
     for playbook in playbooks:
         all_hosts.update(playbook['hosts'])
     logger.info(f"Retrieved {len(playbooks)} playbooks and {len(releases)} releases from database")
-    return render_template('dashboard.html', 
+    return playbooks, releases, sorted(all_hosts)
+
+@app.route('/')
+def index():
+    """Redirect root to playbooks by default."""
+    return redirect(url_for('playbooks'))
+
+@app.route('/playbooks')
+def playbooks():
+    """Show playbooks tab."""
+    playbooks, releases, hosts = get_dashboard_data()
+    return render_template('dashboard.html',
+                         active_tab='playbooks',
                          playbooks=playbooks,
                          releases=releases,
-                         hosts=sorted(all_hosts))
+                         hosts=hosts)
+
+@app.route('/releases')
+def releases():
+    """Show releases tab."""
+    playbooks, releases, hosts = get_dashboard_data()
+    return render_template('dashboard.html',
+                         active_tab='releases',
+                         playbooks=playbooks,
+                         releases=releases,
+                         hosts=hosts)
+
+@app.route('/hosts')
+def hosts():
+    """Show hosts tab."""
+    playbooks, releases, hosts = get_dashboard_data()
+    return render_template('dashboard.html',
+                         active_tab='hosts',
+                         playbooks=playbooks,
+                         releases=releases,
+                         hosts=hosts)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
