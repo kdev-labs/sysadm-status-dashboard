@@ -1,8 +1,8 @@
 services:
   dashboard:
     container_name: ansible-dashboard
-    uid: "${ UID }" 
-    gid: "${ GID }"
+    uid: "${UID}" 
+    gid: "${GID}"
     build: .
     image: ansible-dashboard
     network_mode: host
