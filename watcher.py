@@ -103,18 +103,16 @@ def process_existing_files():
                 continue
             
             # Upsert file_path and file_hash combination
-            if(execute_query(INSERT_REPLACE_FILE_HASHES, (str(file_path), file_hash), commit=True)):
-                logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
-                if file_type == 'playbook':
-                    upsert_playbook(file_path)
-                    processed_count[file_type] += 1
-                elif file_type == 'release':
-                    upsert_release(file_path)
-                    processed_count[file_type] += 1
-                else:
-                    logger.error(f"Unknown file type: {file_type}")
+            execute_query(INSERT_REPLACE_FILE_HASHES, (str(file_path), file_hash), commit=True)
+            logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
+            if file_type == 'playbook':
+                upsert_playbook(file_path)
+                processed_count[file_type] += 1
+            elif file_type == 'release':
+                upsert_release(file_path)
+                processed_count[file_type] += 1
             else:
-                raise Exception(f"Error upserting file_path file_hash file: {file_path}, {file_hash}")
+                logger.error(f"Unknown file type: {file_type}")
 
     logger.info(f"Finished processing existing files:")
     logger.info(f"Processed: {processed_count['playbook']} playbooks, {processed_count['release']} releases")
