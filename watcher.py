@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from db import execute_query
+from db import execute_query, get_db_connection
 from dateutil.parser import isoparse
 
 
@@ -36,15 +36,21 @@ class JsonFileHandler(FileSystemEventHandler):
             else:
                 logger.info(f"Unknown file type: {file_path}")
                 return
-            # We dont need to check fo existence we can just upsert
+
+            # Calculate file hash
             file_hash = compute_file_hash(file_path)
-            if execute_query(INSERT_REPLACE_FILE_HASHES, (file_path, file_hash), commit=True):
-                if file_type == 'playbook':
-                    upsert_playbook(file_path)
-                elif file_type == 'release':
-                    upsert_release(file_path)
-            else:
-                print(f"File already processed: {file_path}")
+            
+            # Process the file based on type
+            success = False
+            if file_type == 'playbook':
+                success = upsert_playbook(file_path)
+            elif file_type == 'release':
+                success = upsert_release(file_path)
+                
+            # Only add to file_hashes if processing was successful
+            if success:
+                execute_query(INSERT_REPLACE_FILE_HASHES, (file_path, file_hash), commit=True)
+                logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
 
 
 def start_watcher():
@@ -131,79 +137,65 @@ def upsert_release(file_path):
             timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
         except Exception as e:
             logger.error(f"Error parsing timestamp with datetime for release {file_path}: {str(e)}")
-
-        try:
-            timestamp = isoparse(data['timestamp'])
-        except Exception as e:
-            logger.error(f"Error parsing timestamp with dateutil for release {file_path}: {str(e)}")
+            try:
+                timestamp = isoparse(data['timestamp'])
+            except Exception as e:
+                logger.error(f"Error parsing timestamp with dateutil for release {file_path}: {str(e)}")
+                return False
         
-        # Begin transaction
-        execute_query('BEGIN TRANSACTION')
+        # Get a single connection for the entire transaction
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
         try:
+            # Begin transaction
+            conn.execute('BEGIN TRANSACTION')
+            
             # Update or insert the current state
             hosts_json = json.dumps(data.get('hosts', []))
             logger.info(f"Processing hosts for {data['binary_name']}: {hosts_json}")
-            execute_query('''
-                INSERT INTO releases (
-                    binary_name, last_updated, last_action, hosts,
-                    has_current, has_new, has_old, git_tag
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(binary_name) DO UPDATE SET
-                    last_updated = excluded.last_updated,
-                    last_action = excluded.last_action,
-                    hosts = CASE 
-                        WHEN excluded.hosts = '[]' THEN releases.hosts
-                        ELSE excluded.hosts
-                    END,
-                    has_current = excluded.has_current,
-                    has_new = excluded.has_new,
-                    has_old = excluded.has_old,
-                    git_tag = CASE 
-                        WHEN excluded.git_tag IS NOT NULL THEN excluded.git_tag
-                        ELSE releases.git_tag
-                    END
+            cursor.execute('''
+                INSERT OR REPLACE INTO releases (
+                    binary_name, action, git_tag, timestamp, hosts
+                ) VALUES (?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
-                timestamp,
                 data['action'],
-                hosts_json,
-                data.get('states', {}).get('current', {}).get('exists', False),
-                data.get('states', {}).get('new', {}).get('exists', False),
-                data.get('states', {}).get('old', {}).get('exists', False),
-                data.get('git_tag')
+                data.get('git_tag'),
+                timestamp,
+                hosts_json
             ))
-            logger.info(f"Inserting/updating release - binary: {data['binary_name']}, action: {data['action']}, git_tag: {data.get('git_tag')}")
             
             # Add to history
-            execute_query('''
+            logger.info(f"Added to history with git_tag: {data.get('git_tag')}")
+            cursor.execute('''
                 INSERT INTO release_history (
-                    binary_name, timestamp, action, hosts,
-                    source_size, source_path, operation, git_tag
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    binary_name, action, git_tag, timestamp, hosts
+                ) VALUES (?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
-                timestamp,
                 data['action'],
-                json.dumps(data.get('hosts', [])),
-                data.get('details', {}).get('source_size'),
-                data.get('details', {}).get('source_path'),
-                data.get('details', {}).get('operation'),
-                data.get('git_tag')
+                data.get('git_tag'),
+                timestamp,
+                hosts_json
             ))
-            logger.info(f"Added to history with git_tag: {data.get('git_tag')}")
             
-            # Commit transaction
-            execute_query('COMMIT')
+            # Commit the transaction
+            conn.commit()
             logger.info(f"Processed release in database: {file_path}")
+            return True
             
         except Exception as e:
-            execute_query('ROLLBACK')
-            raise e
+            logger.error(f"Error processing release {file_path}: {str(e)}")
+            conn.rollback()
+            return False
+        finally:
+            cursor.close()
+            conn.close()
+            
     except Exception as e:
-        logger.error(f"Error processing release {file_path}: {str(e)}")
+        logger.error(f"Error reading release file {file_path}: {str(e)}")
         return False
-    return True
 
 
 def upsert_playbook(file_path):
