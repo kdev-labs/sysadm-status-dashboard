@@ -138,7 +138,7 @@ def upsert_release(file_path):
             logger.error(f"Error parsing timestamp with dateutil for release {file_path}: {str(e)}")
         
         # Begin transaction
-        execute_query('BEGIN TRANSACTION')
+        # execute_query('BEGIN TRANSACTION')
         
         try:
             # Update or insert the current state
@@ -194,11 +194,11 @@ def upsert_release(file_path):
             logger.info(f"Added to history with git_tag: {data.get('git_tag')}")
             
             # Commit transaction
-            execute_query('COMMIT')
+            # execute_query('COMMIT')
             logger.info(f"Processed release in database: {file_path}")
             
         except Exception as e:
-            execute_query('ROLLBACK')
+            # execute_query('ROLLBACK')
             raise e
     except Exception as e:
         logger.error(f"Error processing release {file_path}: {str(e)}")
