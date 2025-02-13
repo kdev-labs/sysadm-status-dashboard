@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Hosts Tab -->
+<div class="tab-pane fade {% if active_tab == 'hosts' %}show active{% endif %}" id="hosts" role="tabpanel">
+    <div class="list-group">
+        {% for host in hosts %}
+        <div class="list-group-item">{{ host }}</div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

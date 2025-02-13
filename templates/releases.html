@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Releases Tab -->
+<div class="tab-pane fade {% if active_tab == 'releases' %}show active{% endif %}" id="releases" role="tabpanel">
+    <div class="table-container">
+        <div class="text-muted small mb-2">
+            <i class="bi bi-database"></i> {{ releases|length }} entries loaded from database
+        </div>
+        <table id="releases-table" class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th style="width: 20%">Binary</th>
+                    <th style="width: 15%">Last Updated</th>
+                    <th style="width: 10%">Last Action</th>
+                    <th style="width: 15%">Hosts</th>
+                    <th style="width: 15%">Git Tag</th>
+                    <th style="width: 15%">State</th>
+                    <th style="width: 10%">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for release in releases %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <span class="me-2">{{ release.name }}</span>
+                            <!-- {% if release.git_tag %}
+                            <span class="git-tag">
+                                <i class="bi bi-tag"></i> {{ release.git_tag }}
+                            </span>
+                            {% endif %} -->
+                        </div>
+                        <!-- {% if release.hosts %}
+                        <div class="hosts small text-muted mt-1">
+                            <i class="bi bi-hdd-network"></i> {{ release.hosts | join(', ') }}
+                        </div>
+                        {% endif %} -->
+                    </td>
+                    <td>{{ release.last_updated }}</td>
+                    <td>
+                        <span class="action-type {{ release.last_action }}">
+                            {{ release.last_action }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="hosts small text-muted">
+                            {{ release.hosts | join(', ') }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if release.git_tag %}
+                        <div class="git-tag small">
+                            <i class="bi bi-tag"></i> {{ release.git_tag }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="release-state">
+                            <div class="state-indicator {% if release.current_state.has_current %}active{% else %}inactive{% endif %}">
+                                <i class="bi {% if release.current_state.has_current %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %}"></i>
+                                <span>Current</span>
+                            </div>
+                            <div class="state-indicator {% if release.current_state.has_new %}active{% else %}inactive{% endif %}">
+                                <i class="bi {% if release.current_state.has_new %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %}"></i>
+                                <span>New</span>
+                            </div>
+                            <div class="state-indicator {% if release.current_state.has_old %}active{% else %}inactive{% endif %}">
+                                <i class="bi {% if release.current_state.has_old %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %}"></i>
+                                <span>Old</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                data-bs-toggle="modal" data-bs-target="#history-{{ release.name }}">
+                            History
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- History Modals -->
+{% for release in releases %}
+<div class="modal fade" id="history-{{ release.name }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ release.name }} - History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="action-history">
+                    {% for action in release.history %}
+                    <div class="action-row">
+                        <div class="action-details">
+                            <div class="action-meta">
+                                <span class="action-type {{ action.action }}">{{ action.action }}</span>
+                                {% if action.source_size %}
+                                <span class="text-muted">Size: {{ action.source_size }} bytes</span>
+                                {% endif %}
+                                {% if action.git_tag and action.action == 'release' %}
+                                <span class="git-tag">
+                                    <i class="bi bi-tag"></i> {{ action.git_tag }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <span class="action-timestamp">{{ action.timestamp }}</span>
+                        </div>
+                        {% if action.hosts %}
+                        <div class="hosts small text-muted mt-2">
+                            <i class="bi bi-hdd-network"></i> {{ action.hosts | join(', ') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
