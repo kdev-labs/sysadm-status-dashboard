@@ -96,14 +96,14 @@ def process_existing_files():
                 continue
             # Check if file has already been processed
             file_hash = compute_file_hash(file_path)
-            exists = execute_query(FILE_EXISTS, (file_path, file_hash))
+            exists = execute_query(FILE_EXISTS, str((file_path), file_hash))
             if exists:
                 logger.debug(f"Skipping already processed file: {file_path}")
                 skipped_count[file_type] += 1
                 continue
             
             # Upsert file_path and file_hash combination
-            if(execute_query(INSERT_REPLACE_FILE_HASHES, (file_path, file_hash), commit=True)):
+            if(execute_query(INSERT_REPLACE_FILE_HASHES, str((file_path), file_hash), commit=True)):
                 logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
                 if file_type == 'playbook':
                     upsert_playbook(file_path)
