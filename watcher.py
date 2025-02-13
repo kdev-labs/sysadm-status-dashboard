@@ -8,6 +8,7 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from db import execute_query
+from dateutil.parser import isoparse
 
 
 logging.basicConfig(level=logging.INFO)
@@ -125,7 +126,15 @@ def upsert_release(file_path):
         with open(file_path) as f:
             data = json.load(f)
         
-        timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+        try:
+            timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+        except Exception as e:
+            logger.error(f"Error parsing timestamp with datetime for release {file_path}: {str(e)}")
+
+        try:
+            timestamp = isoparse(data['timestamp'])
+        except Exception as e:
+            logger.error(f"Error parsing timestamp with dateutil for release {file_path}: {str(e)}")
         
         # Begin transaction
         execute_query('BEGIN TRANSACTION')
