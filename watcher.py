@@ -104,16 +104,17 @@ def process_existing_files():
                 continue
             
             # Upsert file_path and file_hash combination
-            execute_query(INSERT_REPLACE_FILE_HASHES, (str(file_path), file_hash), commit=True)
-            logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
+            upsert_success = False
             if file_type == 'playbook':
-                upsert_playbook(file_path)
-                processed_count[file_type] += 1
+                upsert_success = upsert_playbook(file_path)
             elif file_type == 'release':
-                upsert_release(file_path)
-                processed_count[file_type] += 1
+                upsert_success = upsert_release(file_path)
             else:
                 logger.error(f"Unknown file type: {file_type}")
+            if upsert_success:
+                logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
+                processed_count[file_type] += 1
+                execute_query(INSERT_REPLACE_FILE_HASHES, (str(file_path), file_hash), commit=True)
 
     logger.info(f"Finished processing existing files:")
     logger.info(f"Processed: {processed_count['playbook']} playbooks, {processed_count['release']} releases")
@@ -201,6 +202,8 @@ def upsert_release(file_path):
             raise e
     except Exception as e:
         logger.error(f"Error processing release {file_path}: {str(e)}")
+        return False
+    return True
 
 
 def upsert_playbook(file_path):
@@ -226,6 +229,8 @@ def upsert_playbook(file_path):
         logger.info(f"Upserted playbook in database: {file_path}")
     except Exception as e:
         logger.error(f"Error processing playbook {file_path}: {str(e)}")
+        return False
+    return True
 
 
 
