@@ -98,10 +98,15 @@ def process_existing_files():
             logger.warning(f"Directory does not exist: {directory}")
             continue
             
-        for file_path in Path(directory).glob('*.json'):
+        # Get all JSON files and sort them by creation time
+        files = Path(directory).glob('*.json')
+        sorted_files = sorted(files, key=lambda x: (x.stat().st_ctime, str(x)))
+        
+        for file_path in sorted_files:
             # Skip temporary files
             if file_path.name.startswith('.'):
                 continue
+                
             # Check if file has already been processed
             file_hash = compute_file_hash(file_path)
             exists = execute_query(FILE_EXISTS, (str(file_path), file_hash))
@@ -109,21 +114,20 @@ def process_existing_files():
                 logger.debug(f"Skipping already processed file: {file_path}")
                 skipped_count[file_type] += 1
                 continue
-            
-            # Upsert file_path and file_hash combination
-            upsert_success = False
+                
+            # Process the file based on type
+            success = False
             if file_type == 'playbook':
-                upsert_success = upsert_playbook(file_path)
+                success = upsert_playbook(file_path)
             elif file_type == 'release':
-                upsert_success = upsert_release(file_path)
-            else:
-                logger.error(f"Unknown file type: {file_type}")
-            if upsert_success:
+                success = upsert_release(file_path)
+                
+            if success:
                 logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
                 processed_count[file_type] += 1
                 execute_query(INSERT_REPLACE_FILE_HASHES, (str(file_path), file_hash), commit=True)
             else:
-                failed_count[file_type] +=1
+                failed_count[file_type] += 1
 
     logger.info(f"Finished processing existing files:")
     logger.info(f"Processed: {processed_count['playbook']} playbooks, {processed_count['release']} releases")
