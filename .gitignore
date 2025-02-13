@@ -10,3 +10,4 @@ venv/
 # IDE
 .vscode/
 .idea/
+tmp.json
