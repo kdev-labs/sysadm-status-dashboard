@@ -156,30 +156,35 @@ def upsert_release(file_path):
             logger.info(f"Processing hosts for {data['binary_name']}: {hosts_json}")
             cursor.execute('''
                 INSERT OR REPLACE INTO releases (
-                    binary_name, action, git_tag, timestamp, hosts
-                ) VALUES (?, ?, ?, ?, ?)
+                    binary_name, last_action, git_tag, last_updated, hosts, has_current, has_new, has_old
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
                 data['action'],
                 data.get('git_tag'),
                 timestamp,
-                hosts_json
+                hosts_json,
+                data['states']['current']['exists'],
+                data['states']['new']['exists'],
+                data['states']['old']['exists']
             ))
             
             # Add to history
-            logger.info(f"Added to history with git_tag: {data.get('git_tag')}")
             cursor.execute('''
                 INSERT INTO release_history (
-                    binary_name, action, git_tag, timestamp, hosts
-                ) VALUES (?, ?, ?, ?, ?)
+                    binary_name, action, git_tag, timestamp, hosts, source_size, source_path
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['binary_name'],
                 data['action'],
                 data.get('git_tag'),
                 timestamp,
-                hosts_json
+                hosts_json,
+                data['details']['source_size'],
+                data['details']['source_path']
             ))
             
+            logger.info(f"Added to history with git_tag: {data.get('git_tag')}")
             # Commit the transaction
             conn.commit()
             logger.info(f"Processed release in database: {file_path}")

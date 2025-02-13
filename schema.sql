@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS release_history (
     hosts TEXT,
     source_size INTEGER,
     source_path TEXT,
-    operation TEXT,
     git_tag TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (binary_name) REFERENCES releases(binary_name)
