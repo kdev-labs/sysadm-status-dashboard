@@ -91,6 +91,7 @@ def process_existing_files():
     
     processed_count = {'playbook': 0, 'release': 0}
     skipped_count = {'playbook': 0, 'release': 0}
+    failed_count = {'playbook': 0, 'release': 0}
 
     for directory, file_type in [(playbooks_dir, 'playbook'), (releases_dir, 'release')]:
         if not os.path.exists(directory):
@@ -121,10 +122,13 @@ def process_existing_files():
                 logger.info(f"Upserted new file_path file_hash file: {file_path}, {file_hash}")
                 processed_count[file_type] += 1
                 execute_query(INSERT_REPLACE_FILE_HASHES, (str(file_path), file_hash), commit=True)
+            else:
+                failed_count[file_type] +=1
 
     logger.info(f"Finished processing existing files:")
     logger.info(f"Processed: {processed_count['playbook']} playbooks, {processed_count['release']} releases")
     logger.info(f"Skipped: {skipped_count['playbook']} playbooks, {skipped_count['release']} releases")
+    logger.info(f"Failed: {failed_count['playbook']} playbooks, {failed_count['release']} releases")
 
 
 def upsert_release(file_path):
