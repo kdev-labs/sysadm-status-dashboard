@@ -9,4 +9,10 @@ if [ ! -f "${DATABASE_FILE}" ]; then
     sqlite3 ${DATABASE_FILE} < schema.sql
 fi
 
+if [ ! -f "${DATABASE_FILE}" ]; then
+    echo "Error: Database file not found and could not be created."
+    exit 1
+fi
+
+
 exec "$@"
