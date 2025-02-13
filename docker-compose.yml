@@ -1,6 +1,6 @@
 services:
   dashboard:
-    container_name: ansible-dashboard
+    container_name: ansible-dashboard-beta
     user: "${UID}:${GID}"
     build: .
     image: ansible-dashboard
