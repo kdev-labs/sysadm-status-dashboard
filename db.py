@@ -27,10 +27,19 @@ def get_db_connection():
 def execute_query(query, params=(), commit=False):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(query, params)
-    if commit:
-        conn.commit()
-    result = cursor.fetchall()
-    cursor.close()
-    conn.close()
+    try:
+        cursor.execute(query, params)
+        if commit:
+            conn.commit()
+        result = cursor.fetchall()
+        # success = True
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        if commit:
+            conn.rollback()
+        result = None
+        # success = False
+    finally:
+        cursor.close()
+        conn.close()
     return result
