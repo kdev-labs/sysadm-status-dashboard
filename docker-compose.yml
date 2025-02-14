@@ -1,16 +1,16 @@
 services:
   dashboard:
-    container_name: ansible-dashboard-beta
+    container_name: sysadm-dashboard
     user: "${UID}:${GID}"
     build: .
-    image: ansible-dashboard
+    image: sysadm-dashboard
     network_mode: host
     logging:
       driver: syslog
       options:
         syslog-address: "udp://logging.kdev:5515"
         syslog-format: rfc5424
-        tag: "sysadm_status-dashboard-beta"
+        tag: "docker_sysadm-dashboard"
         syslog-facility: "daemon"
     # Not needed when using network_mode: host
     # ports:
