@@ -31,7 +31,7 @@ class JsonFileHandler(FileSystemEventHandler):
             # Determine file type and check for duplicates
             if 'playbook' in file_path.name:
                 file_type = 'playbook'
-            elif 'release' in file_path.name:
+            elif any(x in file_path.name for x in ['release', 'promote', 'rollback']):
                 file_type = 'release'
             else:
                 logger.info(f"Unknown file type: {file_path}")
