@@ -2,7 +2,10 @@ services:
   dashboard:
     container_name: sysadm-dashboard
     user: "${UID}:${GID}"
-    build: .
+    build:
+      context: .
+      labels:
+        com.docker.compose.project: "sysadm-dashboard"
     image: sysadm-dashboard
     network_mode: host
     logging:
