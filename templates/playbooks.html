@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Playbooks Tab -->
+<div class="tab-pane fade {% if active_tab == 'playbooks' %}show active{% endif %}" id="playbooks" role="tabpanel">
+    <div class="table-container">
+        <div class="text-muted small mb-2">
+            <i class="bi bi-database"></i> {{ playbooks|length }} entries loaded from database
+        </div>
+        <table id="playbooks-table" class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Playbook</th>
+                    <th>Last Run</th>
+                    <th>Status</th>
+                    <th>Hosts</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for playbook in playbooks %}
+                <tr>
+                    <td>{{ playbook.name }}</td>
+                    <td>{{ playbook.last_run }}</td>
+                    <td class="status-{{ playbook.status }}">{{ playbook.status }}</td>
+                    <td>
+                        <div class="hosts">{{ playbook.hosts | join(', ') }}</div>
+                        {% if playbook.details %}
+                        <div class="details">
+                            {% for detail in playbook.details %}
+                            <div>{{ detail }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+{% endblock %}
