@@ -103,7 +103,7 @@
                                 {% if action.source_size %}
                                 <span class="text-muted">Size: {{ action.source_size }} bytes</span>
                                 {% endif %}
-                                {% if action.git_tag and action.action == 'release' %}
+                                {% if action.git_tag and (action.action == 'release' or action.action == 'promote') %}
                                 <span class="git-tag">
                                     <i class="bi bi-tag"></i> {{ action.git_tag }}
                                 </span>
